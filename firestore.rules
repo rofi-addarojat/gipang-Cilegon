@@ -45,6 +45,11 @@ service cloud.firestore {
              (data.get('aboutDesc1', '') is string) &&
              (data.get('aboutDesc2', '') is string) &&
              (data.get('aboutImageUrl', '') is string) &&
+             (data.get('headScripts', '') is string) &&
+             (data.get('bodyScripts', '') is string) &&
+             (data.get('seoTitle', '') is string) &&
+             (data.get('seoDescription', '') is string) &&
+             (data.get('seoKeywords', '') is string) &&
              (data.get('updatedAt', '') is string);
     }
 
@@ -63,6 +68,7 @@ service cloud.firestore {
              data.imageUrl is string && data.imageUrl.size() <= 1000 &&
              (data.get('description', '') is string) &&
              (data.get('variant', '') is string) &&
+             (data.get('galleryUrls', []) is list) &&
              (data.get('createdAt', '') is string);
     }
 

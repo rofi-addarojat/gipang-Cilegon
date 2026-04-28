@@ -5,6 +5,64 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { LogOut, Plus, Trash2, Save, LayoutDashboard, Package, MessageSquare, HelpCircle, User, FileText } from 'lucide-react';
 
+const ImageInput = ({ value, onChange, label = 'URL Gambar' }: { value: string, onChange: (v: string) => void, label?: string }) => {
+  const [mode, setMode] = React.useState<'url' | 'upload'>('url');
+  
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        alert('File harus berupa gambar');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+             const canvas = document.createElement('canvas');
+             const MAX_WIDTH = 800; // max size for firebase limits
+             const MAX_HEIGHT = 800;
+             let width = img.width;
+             let height = img.height;
+             if (width > height) {
+                  if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+             } else {
+                  if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+             }
+             canvas.width = width;
+             canvas.height = height;
+             const ctx = canvas.getContext('2d');
+             if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                onChange(canvas.toDataURL('image/webp', 0.8));
+             }
+        };
+        img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="border rounded-lg p-3 bg-gray-50/50">
+       <div className="flex justify-between items-center mb-2">
+          <label className="block text-xs font-bold text-gray-700">{label}</label>
+          <div className="flex space-x-2 text-xs">
+             <button onClick={() => setMode('url')} className={`px-2 py-1 rounded transition-colors ${mode === 'url' ? 'bg-brand-dark text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>URL</button>
+             <button onClick={() => setMode('upload')} className={`px-2 py-1 rounded transition-colors ${mode === 'upload' ? 'bg-brand-dark text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Upload</button>
+          </div>
+       </div>
+       {mode === 'url' ? (
+          <input type="text" value={value || ''} onChange={e => onChange(e.target.value)} className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-brand-caramel text-sm" placeholder="https://..." />
+       ) : (
+          <div className="space-y-2">
+             <input type="file" accept="image/*" onChange={handleFileUpload} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-cream file:text-brand-caramel-dark hover:file:bg-brand-caramel-light transition-colors" />
+             {value && value.startsWith('data:image') && <span className="text-xs text-green-600 flex items-center mt-1"><Save className="w-3 h-3 mr-1" /> Gambar telah disiapkan</span>}
+          </div>
+       )}
+    </div>
+  );
+};
+
 export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -134,6 +192,9 @@ export default function AdminDashboard() {
              <button onClick={() => setActiveTab('faq')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'faq' ? 'bg-brand-caramel-dark' : 'hover:bg-white/10'}`}>
                 <HelpCircle className="w-5 h-5" /> <span>FAQ</span>
              </button>
+             <button onClick={() => setActiveTab('scripts')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'scripts' ? 'bg-brand-caramel-dark' : 'hover:bg-white/10'}`}>
+                <Save className="w-5 h-5" /> <span>SEO & Script</span>
+             </button>
           </nav>
           <div className="mt-auto border-t border-white/10 pt-6">
              <div className="text-sm text-gray-400 mb-4 px-4 line-clamp-1">{user?.email}</div>
@@ -162,10 +223,7 @@ export default function AdminDashboard() {
                             <label className="block text-sm font-bold text-gray-700 mb-2">Deskripsi</label>
                             <textarea value={homeContent.description} onChange={e => setHomeContent({...homeContent, description: e.target.value})} rows={3} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel"></textarea>
                          </div>
-                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">URL Gambar Utama (Hero)</label>
-                            <input type="text" value={homeContent.imageUrl} onChange={e => setHomeContent({...homeContent, imageUrl: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel" />
-                         </div>
+                         <ImageInput label="URL Gambar Utama (Hero)" value={homeContent.imageUrl || ''} onChange={v => setHomeContent({...homeContent, imageUrl: v})} />
                          <div className="grid grid-cols-2 gap-4">
                             <div>
                                <label className="block text-sm font-bold text-gray-700 mb-2">Nomor WhatsApp (Contoh: 62812...)</label>
@@ -179,9 +237,8 @@ export default function AdminDashboard() {
                                <label className="block text-sm font-bold text-gray-700 mb-2">Link Tokopedia</label>
                                <input type="text" value={homeContent.tokopediaUrl} onChange={e => setHomeContent({...homeContent, tokopediaUrl: e.target.value})} className="w-full px-4 py-2 border rounded-lg" placeholder="https://tokopedia.com/..." />
                             </div>
-                            <div>
-                               <label className="block text-sm font-bold text-gray-700 mb-2">Logo/Favicon URL</label>
-                               <input type="text" value={homeContent.faviconUrl} onChange={e => setHomeContent({...homeContent, faviconUrl: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                            <div className="col-span-2 md:col-span-1">
+                               <ImageInput label="Logo/Favicon URL" value={homeContent.faviconUrl || ''} onChange={v => setHomeContent({...homeContent, faviconUrl: v})} />
                             </div>
                          </div>
                       </div>
@@ -203,10 +260,7 @@ export default function AdminDashboard() {
                             <label className="block text-sm font-bold text-gray-700 mb-2">Paragraf 2</label>
                             <textarea value={homeContent.aboutDesc2 || ''} onChange={e => setHomeContent({...homeContent, aboutDesc2: e.target.value})} rows={3} className="w-full px-4 py-2 border rounded-lg"></textarea>
                          </div>
-                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">URL Gambar Tentang Kami</label>
-                            <input type="text" value={homeContent.aboutImageUrl || ''} onChange={e => setHomeContent({...homeContent, aboutImageUrl: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
-                         </div>
+                         <ImageInput label="URL Gambar Tentang Kami" value={homeContent.aboutImageUrl || ''} onChange={v => setHomeContent({...homeContent, aboutImageUrl: v})} />
                       </div>
                    </div>
 
@@ -223,7 +277,7 @@ export default function AdminDashboard() {
              <div className="max-w-4xl">
                 <div className="flex items-center justify-between mb-8">
                    <h1 className="text-3xl font-bold text-brand-dark">Daftar Produk</h1>
-                   <button onClick={() => handleAddItem('products', { name: 'Produk Baru', description: 'Deskripsi singkat produk', price: 10000, imageUrl: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&q=80', variant: 'Original' }, setProducts, products)} className="flex items-center px-4 py-2 bg-brand-dark text-white rounded-lg hover:bg-brand-caramel-dark">
+                   <button onClick={() => handleAddItem('products', { name: 'Produk Baru', description: 'Deskripsi singkat produk', price: 10000, imageUrl: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&q=80', variant: 'Original', galleryUrls: [] }, setProducts, products)} className="flex items-center px-4 py-2 bg-brand-dark text-white rounded-lg hover:bg-brand-caramel-dark">
                       <Plus className="w-5 h-5 mr-2" /> Tambah Produk
                    </button>
                 </div>
@@ -246,15 +300,42 @@ export default function AdminDashboard() {
                                <label className="block text-xs font-bold text-gray-500 mb-1">Varian / Kategori</label>
                                <input type="text" value={p.variant} onChange={e => handleUpdateItemField(p.id, 'variant', e.target.value, setProducts, products)} className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-brand-caramel" />
                             </div>
-                            <div>
-                               <label className="block text-xs font-bold text-gray-500 mb-1">URL Gambar</label>
-                               <input type="text" value={p.imageUrl} onChange={e => handleUpdateItemField(p.id, 'imageUrl', e.target.value, setProducts, products)} className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-brand-caramel" />
+                            <div className="col-span-2 md:col-span-1">
+                               <ImageInput label="Gambar Utama Produk" value={p.imageUrl || ''} onChange={v => handleUpdateItemField(p.id, 'imageUrl', v, setProducts, products)} />
                             </div>
                             <div className="col-span-2">
                                <label className="block text-xs font-bold text-gray-500 mb-1">Deskripsi Singkat</label>
                                <input type="text" value={p.description} onChange={e => handleUpdateItemField(p.id, 'description', e.target.value, setProducts, products)} className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-brand-caramel" />
                             </div>
-                            <div className="col-span-2 flex justify-end space-x-3 mt-2 border-t pt-4">
+                            <div className="col-span-2 mt-2">
+                               <label className="block text-xs font-bold text-gray-500 mb-2">Galeri Tambahan (Opsional)</label>
+                               <div className="space-y-3">
+                                  {(p.galleryUrls || []).map((url: string, index: number) => (
+                                     <div key={index} className="flex flex-col md:flex-row items-start gap-2 border border-gray-200 p-3 rounded-lg relative bg-white">
+                                        <div className="flex-1 w-full">
+                                           <ImageInput label={`Gambar Galeri ${index + 1}`} value={url} onChange={v => {
+                                              const newG = [...(p.galleryUrls || [])];
+                                              newG[index] = v;
+                                              handleUpdateItemField(p.id, 'galleryUrls', newG, setProducts, products);
+                                           }} />
+                                        </div>
+                                        <button onClick={() => {
+                                              const newG = (p.galleryUrls || []).filter((_: any, idx: number) => idx !== index);
+                                              handleUpdateItemField(p.id, 'galleryUrls', newG, setProducts, products);
+                                           }} className="p-2 mt-7 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-100 shrink-0 md:self-start">
+                                           <Trash2 className="w-5 h-5" />
+                                        </button>
+                                     </div>
+                                  ))}
+                                  <button onClick={() => {
+                                     const newG = [...(p.galleryUrls || []), ''];
+                                     handleUpdateItemField(p.id, 'galleryUrls', newG, setProducts, products);
+                                  }} className="px-4 py-2 text-sm bg-gray-100 text-brand-dark rounded-lg hover:bg-gray-200 transition-colors flex items-center">
+                                     <Plus className="w-4 h-4 mr-1" /> Tambah Gambar Galeri
+                                  </button>
+                               </div>
+                            </div>
+                            <div className="col-span-2 flex justify-end space-x-3 mt-4 border-t pt-4">
                                <button onClick={() => handleDeleteItem('products', p.id, setProducts, products)} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg flex items-center transition-colors">
                                   <Trash2 className="w-4 h-4 mr-1" /> Hapus
                                </button>
@@ -290,9 +371,8 @@ export default function AdminDashboard() {
                                   <label className="block text-xs font-bold text-gray-500 mb-1">Judul Artikel</label>
                                   <input type="text" value={a.title} onChange={e => handleUpdateItemField(a.id, 'title', e.target.value, setArticles, articles)} className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-brand-caramel" />
                                </div>
-                               <div>
-                                  <label className="block text-xs font-bold text-gray-500 mb-1">URL Gambar</label>
-                                  <input type="text" value={a.imageUrl} onChange={e => handleUpdateItemField(a.id, 'imageUrl', e.target.value, setArticles, articles)} className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-brand-caramel" />
+                               <div className="md:col-span-1">
+                                  <ImageInput label="Gambar Artikel" value={a.imageUrl || ''} onChange={v => handleUpdateItemField(a.id, 'imageUrl', v, setArticles, articles)} />
                                </div>
                                <div className="md:col-span-2">
                                   <label className="block text-xs font-bold text-gray-500 mb-1">Ringkasan Singkat</label>
@@ -411,6 +491,55 @@ export default function AdminDashboard() {
                       </div>
                    ))}
                    {faqs.length === 0 && <div className="text-gray-500 bg-white p-8 text-center rounded-2xl border border-gray-100 shadow-sm">Belum ada FAQ.</div>}
+                </div>
+             </div>
+          )}
+
+          {activeTab === 'scripts' && (
+             <div className="max-w-3xl">
+                <h1 className="text-3xl font-bold text-brand-dark mb-8">Pengaturan SEO & Script</h1>
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 space-y-8">
+                   <div>
+                      <h2 className="text-xl font-bold text-brand-dark mb-2">Meta Tag SEO Bawaan</h2>
+                      <p className="text-sm text-gray-500 mb-6">Atur meta tag title, description, dan keywords yang akan dimuat untuk keperluan SEO.</p>
+                      <div className="space-y-4">
+                         <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">SEO Title</label>
+                            <input type="text" value={homeContent.seoTitle || ''} onChange={e => setHomeContent({...homeContent, seoTitle: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel" placeholder="Contoh: Gipang Cilegon - Oleh Oleh Khas Banten" />
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">SEO Description</label>
+                            <textarea value={homeContent.seoDescription || ''} onChange={e => setHomeContent({...homeContent, seoDescription: e.target.value})} rows={3} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel" placeholder="Deskripsi singkat yang akan muncul di hasil pencarian Google..."></textarea>
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">SEO Keywords</label>
+                            <input type="text" value={homeContent.seoKeywords || ''} onChange={e => setHomeContent({...homeContent, seoKeywords: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel" placeholder="Contoh: gipang, cilegon, oleh-oleh banten, jajanan manis" />
+                            <p className="text-xs text-gray-500 mt-1">Pisahkan kata kunci dengan koma.</p>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="pt-8 border-t border-gray-100">
+                      <h2 className="text-xl font-bold text-brand-dark mb-2">Inject Head / Body Script</h2>
+                      <p className="text-sm text-gray-500 mb-6">Gunakan area ini untuk memasukkan script Google Analytics, Google Tag Manager, Meta Pixel, atau Search Console. Pastikan menyertakan tag HTML dengan benar.</p>
+                      <div className="space-y-6">
+                         <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Custom Script &lt;head&gt;</label>
+                            <textarea value={homeContent.headScripts || ''} onChange={e => setHomeContent({...homeContent, headScripts: e.target.value})} rows={6} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel font-mono text-sm" placeholder="<!-- Masukkan meta tags, analytics, dll di sini -->"></textarea>
+                            <p className="text-xs text-gray-500 mt-1">Sangat cocok untuk meta tag verifikasi Google Search Console, script Analytics, dan Pixel.</p>
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Custom Script &lt;body&gt;</label>
+                            <textarea value={homeContent.bodyScripts || ''} onChange={e => setHomeContent({...homeContent, bodyScripts: e.target.value})} rows={6} className="w-full px-4 py-2 border rounded-lg focus:ring-brand-caramel focus:border-brand-caramel font-mono text-sm" placeholder="<!-- Masukkan body scripts, noscript, dll di sini -->"></textarea>
+                            <p className="text-xs text-gray-500 mt-1">Sangat cocok untuk script tambahan yang butuh diload di bagian bawah body.</p>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="pt-4 border-t border-gray-100">
+                      <button onClick={handleSaveHome} disabled={savingHome} className="flex items-center justify-center px-8 py-3 bg-brand-terracotta text-white rounded-xl hover:bg-brand-caramel-dark font-medium w-full md:w-auto md:ml-auto transition-colors">
+                         <Save className="w-5 h-5 mr-2" /> {savingHome ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                      </button>
+                   </div>
                 </div>
              </div>
           )}

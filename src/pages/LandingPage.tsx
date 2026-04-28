@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
-import { ShoppingBag, ShieldCheck, HeartPulse, Truck, Star, ChevronDown, MessageCircle, Menu, X, ArrowRight } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, HeartPulse, Truck, Star, ChevronDown, MessageCircle, Menu, X, ArrowRight, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -15,6 +16,21 @@ export default function LandingPage() {
   const [features, setFeatures] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<any>(null); // For dialog
+  
+  // Gallery State
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  const openGallery = (product: any) => {
+    const urls = [product.imageUrl];
+    if (product.galleryUrls && Array.isArray(product.galleryUrls)) {
+      urls.push(...product.galleryUrls.filter((u: string) => u));
+    }
+    setGalleryImages(urls);
+    setCurrentGalleryIndex(0);
+    setIsGalleryOpen(true);
+  };
 
   const renderIcon = (iconName: string, className: string = "w-8 h-8") => {
     switch (iconName) {
@@ -124,10 +140,53 @@ export default function LandingPage() {
     };
   }, []);
 
+  // Script Injector Effect
+  useEffect(() => {
+    if (!homeContent) return;
+
+    if (homeContent.headScripts && !document.head.querySelector('meta[name="injected-head-scripts"]')) {
+      try {
+         const frag = document.createRange().createContextualFragment(homeContent.headScripts);
+         const marker = document.createElement('meta');
+         marker.name = "injected-head-scripts";
+         document.head.appendChild(marker);
+         document.head.appendChild(frag);
+      } catch (e) {
+         console.error("Failed to inject head scripts:", e);
+      }
+    }
+
+    if (homeContent.bodyScripts && !document.body.querySelector('meta[name="injected-body-scripts"]')) {
+      try {
+         const frag = document.createRange().createContextualFragment(homeContent.bodyScripts);
+         const marker = document.createElement('meta');
+         marker.name = "injected-body-scripts";
+         document.body.appendChild(marker);
+         document.body.appendChild(frag);
+      } catch (e) {
+         console.error("Failed to inject body scripts:", e);
+      }
+    }
+  }, [homeContent?.headScripts, homeContent?.bodyScripts]);
+
   const waLink = `https://wa.me/${homeContent?.whatsappNumber || '6281234567890'}?text=Halo%20saya%20mau%20pesan%20Gipang%20Cilegon`;
 
   return (
     <div className="min-h-screen bg-brand-cream text-brand-dark font-sans selection:bg-brand-caramel selection:text-white">
+      <Helmet>
+        <html lang="id" />
+        <title>{homeContent?.seoTitle || homeContent?.headline || 'Gipang Cilegon'}</title>
+        <meta name="description" content={homeContent?.seoDescription || homeContent?.description || 'Oleh-oleh khas Cilegon Banten'} />
+        {homeContent?.seoKeywords && <meta name="keywords" content={homeContent.seoKeywords} />}
+        <meta property="og:title" content={homeContent?.seoTitle || homeContent?.headline || 'Gipang Cilegon'} />
+        <meta property="og:description" content={homeContent?.seoDescription || homeContent?.description || 'Oleh-oleh khas Cilegon Banten'} />
+        {homeContent?.imageUrl && <meta property="og:image" content={homeContent.imageUrl} />}
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={window.location.origin} />
+      </Helmet>
+
       {/* Navbar */}
       <nav className="fixed w-full z-50 top-0 left-0 start-0 border-b border-brand-dark/10 bg-brand-cream/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between p-4 px-6 md:px-12">
@@ -227,33 +286,44 @@ export default function LandingPage() {
               </div>
 
               <div className="grid md:grid-cols-3 gap-8">
-                 {products.length > 0 ? products.map((product, i) => (
+                 {products.length > 0 ? products.map((product, i) => {
+                    const productWaLink = `https://wa.me/${homeContent?.whatsappNumber || '6281234567890'}?text=${encodeURIComponent('Halo, saya mau pesan Gipang Cilegon khusus varian: ' + product.name)}`;
+                    return (
                     <motion.div 
                        key={product.id}
                        initial={{ opacity: 0, y: 20 }}
                        whileInView={{ opacity: 1, y: 0 }}
                        viewport={{ once: true }}
                        transition={{ delay: i * 0.1 }}
-                       className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
+                       className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col relative"
                     >
-                       <div className="aspect-square overflow-hidden bg-gray-100">
+                       <div 
+                          className="aspect-square overflow-hidden bg-gray-100 relative cursor-pointer"
+                          onClick={() => openGallery(product)}
+                       >
                           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                       </div>
-                       <div className="p-6">
-                          <div className="mb-2">
-                             <span className="inline-block px-3 py-1 text-xs font-medium bg-brand-cream text-brand-caramel-dark rounded-full">{product.variant || 'Original'}</span>
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                             <div className="bg-white text-brand-dark px-4 py-2 rounded-full font-bold flex items-center"><ImageIcon className="w-4 h-4 mr-2" /> Lihat Galeri</div>
                           </div>
-                          <h3 className="text-xl font-bold font-serif mb-2">{product.name}</h3>
+                       </div>
+                       <div className="p-6 flex flex-col flex-1">
+                          <div className="mb-2 flex items-center justify-between">
+                             <span className="inline-block px-3 py-1 text-xs font-medium bg-brand-cream text-brand-caramel-dark rounded-full">{product.variant || 'Original'}</span>
+                             {product.galleryUrls && product.galleryUrls.length > 0 && (
+                                <span className="text-xs text-brand-terracotta font-medium flex items-center"><ImageIcon className="w-3 h-3 mr-1" /> {(product.galleryUrls.length + 1)} Foto</span>
+                             )}
+                          </div>
+                          <h3 className="text-xl font-bold font-serif mb-2 group-hover:text-brand-terracotta transition-colors">{product.name}</h3>
                           <p className="text-gray-500 text-sm mb-4 line-clamp-2">{product.description}</p>
-                          <div className="flex items-center justify-between">
-                             <span className="text-xl font-bold text-brand-terracotta">Rp {product.price?.toLocaleString('id-ID')}</span>
-                             <a href={waLink} target="_blank" rel="noopener noreferrer" className="p-2 bg-brand-dark text-white rounded-full hover:bg-brand-caramel-dark transition-colors">
-                                <ShoppingBag className="w-5 h-5" />
+                          <div className="flex items-center justify-between mt-auto">
+                             <span className="text-xl font-bold text-brand-dark">Rp {product.price?.toLocaleString('id-ID')}</span>
+                             <a href={productWaLink} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-brand-cream text-brand-caramel-dark rounded-full hover:bg-brand-caramel-dark hover:text-white transition-colors flex items-center font-bold text-sm">
+                                <MessageCircle className="w-4 h-4 mr-2" /> Pesan WA
                              </a>
                           </div>
                        </div>
                     </motion.div>
-                 )) : (
+                 )}) : (
                      <div className="col-span-3 text-center text-gray-500 py-10">Belum ada produk.</div>
                  )}
               </div>
@@ -416,6 +486,48 @@ export default function LandingPage() {
         </section>
 
       </main>
+
+      {/* Product Gallery Dialog */}
+      <Dialog.Root open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] transition-opacity data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+            <Dialog.Close asChild>
+              <button className="absolute top-4 right-4 sm:top-8 sm:right-8 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-[70] outline-none">
+                <X className="w-6 h-6" />
+              </button>
+            </Dialog.Close>
+            
+            {galleryImages.length > 1 && (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setCurrentGalleryIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1)); }}
+                  className="absolute left-4 sm:left-8 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-[70] outline-none"
+                 >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setCurrentGalleryIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0)); }}
+                  className="absolute right-4 sm:right-8 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-[70] outline-none"
+                 >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+
+            <div className="relative max-w-full max-h-full aspect-square md:aspect-auto md:w-3/4 md:h-5/6 flex flex-col items-center justify-center">
+               <img src={galleryImages[currentGalleryIndex]} alt={`Gallery image ${currentGalleryIndex + 1}`} className="max-w-full max-h-full min-h-[300px] object-contain rounded-xl select-none" />
+               {galleryImages.length > 1 && (
+                  <div className="absolute -bottom-8 md:bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 bg-black/50 px-4 py-2 rounded-full backdrop-blur-md">
+                     {galleryImages.map((_, idx) => (
+                        <div key={idx} className={`w-2 h-2 rounded-full transition-colors ${idx === currentGalleryIndex ? 'bg-white' : 'bg-white/30'}`} />
+                     ))}
+                  </div>
+               )}
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {/* Footer */}
       <footer className="bg-brand-dark text-white pt-16 pb-8 border-t border-white/10">

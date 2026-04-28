@@ -16,6 +16,11 @@
         "aboutDesc1": { "type": "string" },
         "aboutDesc2": { "type": "string" },
         "aboutImageUrl": { "type": "string" },
+        "headScripts": { "type": "string" },
+        "bodyScripts": { "type": "string" },
+        "seoTitle": { "type": "string" },
+        "seoDescription": { "type": "string" },
+        "seoKeywords": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
       "required": ["headline", "description"]
@@ -29,6 +34,7 @@
         "description": { "type": "string" },
         "price": { "type": "number" },
         "imageUrl": { "type": "string" },
+        "galleryUrls": { "type": "array", "items": { "type": "string" } },
         "variant": { "type": "string" },
         "createdAt": { "type": "string" }
       },
