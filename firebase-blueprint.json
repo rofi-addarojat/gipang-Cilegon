@@ -12,6 +12,10 @@
         "shopeeUrl": { "type": "string" },
         "tokopediaUrl": { "type": "string" },
         "faviconUrl": { "type": "string" },
+        "aboutTitle": { "type": "string" },
+        "aboutDesc1": { "type": "string" },
+        "aboutDesc2": { "type": "string" },
+        "aboutImageUrl": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
       "required": ["headline", "description"]
@@ -42,6 +46,31 @@
       },
       "required": ["name", "review", "rating"]
     },
+    "Article": {
+      "title": "Article",
+      "description": "Articles and blog posts",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "summary", "content", "imageUrl"]
+    },
+    "Feature": {
+      "title": "Feature",
+      "description": "Why Us features",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "description", "icon"]
+    },
     "Faq": {
       "title": "FAQ",
       "description": "Frequently Asked Questions",
@@ -66,6 +95,14 @@
     "/testimonials/{testimonialId}": {
       "schema": { "$ref": "#/entities/Testimonial" },
       "description": "List of testimonials"
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "List of articles"
+    },
+    "/features/{featureId}": {
+      "schema": { "$ref": "#/entities/Feature" },
+      "description": "List of why us features"
     },
     "/faq/{faqId}": {
       "schema": { "$ref": "#/entities/Faq" },

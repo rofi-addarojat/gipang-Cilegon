@@ -2,15 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
-import { ShoppingBag, ShieldCheck, HeartPulse, Truck, Star, ChevronDown, MessageCircle, Menu, X } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, HeartPulse, Truck, Star, ChevronDown, MessageCircle, Menu, X, ArrowRight } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
+import * as Dialog from '@radix-ui/react-dialog';
 
 export default function LandingPage() {
   const [homeContent, setHomeContent] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [faqs, setFaqs] = useState<any[]>([]);
+  const [articles, setArticles] = useState<any[]>([]);
+  const [features, setFeatures] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<any>(null); // For dialog
+
+  const renderIcon = (iconName: string, className: string = "w-8 h-8") => {
+    switch (iconName) {
+       case 'ShieldCheck': return <ShieldCheck className={className} />;
+       case 'HeartPulse': return <HeartPulse className={className} />;
+       case 'Star': return <Star className={className} />;
+       case 'Truck': return <Truck className={className} />;
+       default: return <Star className={className} />;
+    }
+  };
 
   useEffect(() => {
     const unsubHome = onSnapshot(doc(db, 'content', 'home'), (docSnap) => {
@@ -72,11 +86,41 @@ export default function LandingPage() {
       }
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'faq'));
 
+    const unsubArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
+      if (snapshot.empty) {
+        setArticles([
+          { id: '1', title: 'Sejarah Gipang: Camilan Khas Banten yang Melegenda', summary: 'Mengenal lebih dekat sejarah panjang gipang dari masa ke masa sebagai primadona oleh-oleh khas Cilegon.', content: 'Gipang merupakan camilan legendaris khas Banten yang terbuat dari beras ketan pilihan yang dicampur dengan karamel lezat. Sejak puluhan tahun lalu, camilan ini terus menjadi favorit masyarakat... \n\nSemua proses pembuatan hingga hari ini masih mengikuti resep asli dari leluhur, yang memastikan setiap gigitan terasa otentik.', imageUrl: 'https://images.unsplash.com/photo-1600854291157-5ffcddfb2ac0?auto=format&fit=crop&q=80' },
+          { id: '2', title: 'Cara Membuat Gipang Rumahan', summary: 'Ingin mencoba membuat gipang sendiri di rumah? Ikuti resep mudah berikut ini!', content: 'Membuat gipang yang renyah dan gurih tidak sesulit yang dibayangkan. Pertama-tama, siapkan beras ketan yang sudah dikukus hingga matang, kemudian jemur hingga kering... \n\nSetelah itu, goreng ketan kering dalam minyak panas, dan campurkan dengan gula merah cair atau karamel. Hasilnya adalah gipang yang nikmat disajikan bersama teh hangat.', imageUrl: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&q=80' },
+          { id: '3', title: 'Manfaat Ketan Bagi Kesehatan Tubuh', summary: 'Selain memiliki tekstur yang kenyal, bahan dasar gipang yaitu ketan juga memiliki segudang manfaat menarik.', content: 'Beras ketan yang menjadi bahan baku gipang adalah sumber karbohidrat yang sangat baik untuk energi... \n\nMeski begitu, karena proses pembuatan gipang memakai karamel manis, sangat disarankan untuk mengonsumsinya dalam batas wajar agar keseimbangan asupan gula tetap terjaga.', imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80' },
+          { id: '4', title: 'Perbedaan Gipang Original dan Kacang', summary: 'Temukan pilihan varian mana yang paling cocok bagi lidah dan selera Anda.', content: 'Bagi penikmat otentik, varian original sangat menonjolkan aroma ketan murni berpadu dengan karamel. Sedangkan bagi pecinta tekstur ekstra renyah dan sensasi gurih, taburan kacang tanah yang telah disangrai sempurna sangat pas menjadi pilihan utama... \n\nKeduanya memiliki karakteristik tersendiri, namun kualitas dan kerenyahannya tetap sama.', imageUrl: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?auto=format&fit=crop&q=80' },
+          { id: '5', title: '5 Olahan Camilan Cilegon Paling Dicari', summary: 'Selain Gipang, Cilegon Banten juga menyimpan banyak kuliner lainnya lho! Cek ulasan berikut.', content: 'Kota Baja ini tak hanya dikenal dengan kawasan industrinya, tapi juga kulinernya yang menarik. Mulai dari Sate Bandeng, Rabeg Banten, Kue Ketan Bintul, hingga kue Pasung... \n\nDan pastinya Gipang selalu menduduki posisi teratas sebagai camilan yang tahan lama dan praktis untuk dibawa pulang.', imageUrl: 'https://images.unsplash.com/photo-1588636181729-19cc8eb1cecc?auto=format&fit=crop&q=80' },
+          { id: '6', title: 'Inovasi Kemasan Gipang Menuju Era Modern', summary: 'Bagaimana Gipang beradaptasi dari kemasan tradisional hingga pouch praktis saat ini.', content: 'Zaman dahulu, gipang hanya dikemas menggunakan plastik tipis atau kertas. Namun agar menjaga kualitas dan ketahanan renyahnya, kini Gipang Premium menggunakan zip-lock pouch! \n\nIni memastikan udara luar tidak mudah masuk, sehingga kamu bisa menyimpannya lebih lama walau kemasan sudah pernah dibuka.', imageUrl: 'https://images.unsplash.com/photo-1505253304499-671c55fb57fe?auto=format&fit=crop&q=80' }
+        ]);
+      } else {
+        setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'articles'));
+
+    const unsubFeatures = onSnapshot(collection(db, 'features'), (snapshot) => {
+      if (snapshot.empty) {
+        setFeatures([
+          { id: '1', title: 'Tanpa Pengawet', description: 'Gipang diolah secara alami tanpa bahan kimia, menghasilkan rasa murni yang aman dikonsumsi harian.', icon: 'ShieldCheck' },
+          { id: '2', title: 'Resep Asli', description: 'Mempertahankan resep turun temurun sejak puluhan tahun.', icon: 'HeartPulse' },
+          { id: '3', title: 'Karamel Premium', description: 'Gula merah pilihan yang menghasilkan karamel dengan tingkat kemanisan yang pas.', icon: 'Star' },
+          { id: '4', title: 'Pengiriman Aman', description: 'Dikemas khusus agar gipang tetap utuh dan renyah sampai ke rumah Anda.', icon: 'Truck' },
+        ]);
+      } else {
+        setFeatures(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'features'));
+
     return () => {
       unsubHome();
       unsubProducts();
       unsubTestimonials();
       unsubFaqs();
+      unsubArticles();
+      unsubFeatures();
     };
   }, []);
 
@@ -103,6 +147,7 @@ export default function LandingPage() {
               <li><a href="#home" className="block py-2 px-3 text-brand-dark hover:text-brand-caramel-dark md:p-0">Home</a></li>
               <li><a href="#products" className="block py-2 px-3 text-brand-dark hover:text-brand-caramel-dark md:p-0">Produk</a></li>
               <li><a href="#about" className="block py-2 px-3 text-brand-dark hover:text-brand-caramel-dark md:p-0">Tentang Kami</a></li>
+              <li><a href="#articles" className="block py-2 px-3 text-brand-dark hover:text-brand-caramel-dark md:p-0">Artikel</a></li>
               <li><a href="#faq" className="block py-2 px-3 text-brand-dark hover:text-brand-caramel-dark md:p-0">FAQ</a></li>
             </ul>
           </div>
@@ -158,34 +203,17 @@ export default function LandingPage() {
         <section className="bg-white py-16">
           <div className="max-w-7xl mx-auto px-6 md:px-12">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-               <motion.div whileHover={{ y: -5 }} className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-brand-cream flex items-center justify-center text-brand-terracotta">
-                     <ShieldCheck className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-serif font-bold">Tanpa Pengawet</h3>
-                  <p className="text-sm text-gray-500">Aman dikonsumsi setiap hari</p>
-               </motion.div>
-               <motion.div whileHover={{ y: -5 }} className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-brand-cream flex items-center justify-center text-brand-terracotta">
-                     <HeartPulse className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-serif font-bold">Resep Asli</h3>
-                  <p className="text-sm text-gray-500">Warisan rasa turun temurun</p>
-               </motion.div>
-               <motion.div whileHover={{ y: -5 }} className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-brand-cream flex items-center justify-center text-brand-terracotta">
-                     <Star className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-serif font-bold">Karamel Premium</h3>
-                  <p className="text-sm text-gray-500">Manis pas, tidak bikin eneg</p>
-               </motion.div>
-               <motion.div whileHover={{ y: -5 }} className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-brand-cream flex items-center justify-center text-brand-terracotta">
-                     <Truck className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-serif font-bold">Pengiriman Aman</h3>
-                  <p className="text-sm text-gray-500">Packing rapi ke seluruh wilayah</p>
-               </motion.div>
+               {features.length > 0 ? features.map((feature, i) => (
+                  <motion.div key={feature.id} whileHover={{ y: -5 }} className="flex flex-col items-center text-center space-y-3">
+                     <div className="w-16 h-16 rounded-full bg-brand-cream flex items-center justify-center text-brand-terracotta">
+                        {renderIcon(feature.icon)}
+                     </div>
+                     <h3 className="font-serif font-bold">{feature.title}</h3>
+                     <p className="text-sm text-gray-500">{feature.description}</p>
+                  </motion.div>
+               )) : (
+                  <div className="col-span-4 text-center text-gray-500">Belum ada fitur.</div>
+               )}
             </div>
           </div>
         </section>
@@ -241,7 +269,7 @@ export default function LandingPage() {
                  viewport={{ once: true }}
                  className="order-2 md:order-1"
               >
-                 <img src="https://images.unsplash.com/photo-1600854291157-5ffcddfb2ac0?auto=format&fit=crop&q=80" alt="About Gipang" className="rounded-3xl shadow-lg w-full" />
+                 <img src={homeContent?.aboutImageUrl || 'https://images.unsplash.com/photo-1600854291157-5ffcddfb2ac0?auto=format&fit=crop&q=80'} alt="About Gipang" className="rounded-3xl shadow-lg w-full" />
               </motion.div>
               <motion.div 
                  initial={{ opacity: 0, x: 30 }}
@@ -249,12 +277,12 @@ export default function LandingPage() {
                  viewport={{ once: true }}
                  className="order-1 md:order-2"
               >
-                 <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-dark mb-6">Cerita Rasa Kami</h2>
+                 <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-dark mb-6">{homeContent?.aboutTitle || 'Cerita Rasa Kami'}</h2>
                  <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                    Bermula dari dapur kecil di sudut kota Cilegon, Gipang yang kami produksi bukan sekadar camilan. Ia adalah representasi dari sejarah panjang dan perpaduan rasa otentik dengan sentuhan gaya hidup modern.
+                    {homeContent?.aboutDesc1 || 'Bermula dari dapur kecil di sudut kota Cilegon, Gipang yang kami produksi bukan sekadar camilan. Ia adalah representasi dari sejarah panjang dan perpaduan rasa otentik dengan sentuhan gaya hidup modern.'}
                  </p>
                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-                    Setiap potong gipang dibuat dengan bahan lokal terbaik, diaduk bersama karamel yang pas agar menghasilkan sensasi "kriuk" saat digigit dan "meleleh" di mulut.
+                    {homeContent?.aboutDesc2 || 'Setiap potong gipang dibuat dengan bahan lokal terbaik, diaduk bersama karamel yang pas agar menghasilkan sensasi "kriuk" saat digigit dan "meleleh" di mulut.'}
                  </p>
                  <div className="flex items-center space-x-4">
                     <div className="w-12 h-1 bg-brand-caramel-dark"></div>
@@ -299,6 +327,66 @@ export default function LandingPage() {
                 )}
              </div>
           </div>
+        </section>
+
+        {/* Articles */}
+        <section id="articles" className="py-24 bg-brand-cream/50">
+           <div className="max-w-7xl mx-auto px-6 md:px-12">
+              <div className="text-center mb-16">
+                 <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-dark mb-4">Artikel & Tips</h2>
+                 <p className="text-gray-600 max-w-2xl mx-auto">Kami mengumpulkan cerita dan inspirasi seputar gipang, tradisi Banten, dan tips menarik lainnya.</p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8">
+                 {articles.length > 0 ? articles.map((article, i) => (
+                    <motion.div 
+                       key={article.id}
+                       initial={{ opacity: 0, y: 20 }}
+                       whileInView={{ opacity: 1, y: 0 }}
+                       viewport={{ once: true }}
+                       transition={{ delay: i * 0.1 }}
+                       className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                    >
+                       <div className="aspect-[4/3] overflow-hidden bg-gray-100 relative">
+                          <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                       </div>
+                       <div className="p-6 flex flex-col flex-1">
+                          <h3 className="text-xl font-bold font-serif mb-3 line-clamp-2">{article.title}</h3>
+                          <p className="text-gray-500 text-sm mb-6 line-clamp-3 flex-1">{article.summary}</p>
+                          <Dialog.Root>
+                             <Dialog.Trigger asChild>
+                                <button onClick={() => setSelectedArticle(article)} className="flex items-center text-sm font-bold text-brand-terracotta hover:text-brand-caramel-dark transition-colors mt-auto group/btn">
+                                   Baca Selengkapnya <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                </button>
+                             </Dialog.Trigger>
+                             <Dialog.Portal>
+                                <Dialog.Overlay className="fixed inset-0 bg-brand-dark/40 backdrop-blur-sm z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+                                <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 border border-brand-dark/10 bg-white p-0 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                                   <div className="h-64 sm:h-80 w-full relative shrink-0">
+                                      <img src={selectedArticle?.imageUrl} alt={selectedArticle?.title} className="w-full h-full object-cover" />
+                                      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
+                                      <Dialog.Close asChild>
+                                         <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-brand-dark hover:bg-white transition-colors shadow-sm">
+                                            <X className="w-5 h-5" />
+                                         </button>
+                                      </Dialog.Close>
+                                   </div>
+                                   <div className="px-6 pb-8 overflow-y-auto">
+                                      <Dialog.Title className="text-2xl sm:text-3xl font-serif font-bold text-brand-dark mb-4 leading-tight">{selectedArticle?.title}</Dialog.Title>
+                                      <div className="text-sm sm:text-base text-gray-600 space-y-4 whitespace-pre-wrap leading-relaxed">
+                                         {selectedArticle?.content}
+                                      </div>
+                                   </div>
+                                </Dialog.Content>
+                             </Dialog.Portal>
+                          </Dialog.Root>
+                       </div>
+                    </motion.div>
+                 )) : (
+                     <div className="col-span-3 text-center text-gray-500 py-10">Belum ada artikel.</div>
+                 )}
+              </div>
+           </div>
         </section>
 
         {/* FAQ */}
@@ -349,6 +437,7 @@ export default function LandingPage() {
                   <li><a href="#home" className="hover:text-white transition-colors">Home</a></li>
                   <li><a href="#products" className="hover:text-white transition-colors">Produk</a></li>
                   <li><a href="#about" className="hover:text-white transition-colors">Tentang Kami</a></li>
+                  <li><a href="#articles" className="hover:text-white transition-colors">Artikel</a></li>
                   <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
                </ul>
             </div>
