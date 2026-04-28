@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'masroficom@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+
+    // Home Content
+    // Entity: HomeContent
+    function isValidHomeContent(data) {
+      return data.keys().hasAll(['headline', 'description']) &&
+             data.headline is string && data.headline.size() <= 200 &&
+             data.description is string && data.description.size() <= 1000 &&
+             (data.get('imageUrl', '') is string) &&
+             (data.get('whatsappNumber', '') is string) &&
+             (data.get('shopeeUrl', '') is string) &&
+             (data.get('tokopediaUrl', '') is string) &&
+             (data.get('faviconUrl', '') is string) &&
+             (data.get('updatedAt', '') is string);
+    }
+
+    match /content/home {
+      allow read: if true;
+      allow create: if isAdmin() && isValidHomeContent(incoming());
+      allow update: if isAdmin() && isValidHomeContent(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Products
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'price', 'imageUrl']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.price is number && data.price >= 0 &&
+             data.imageUrl is string && data.imageUrl.size() <= 1000 &&
+             (data.get('description', '') is string) &&
+             (data.get('variant', '') is string) &&
+             (data.get('createdAt', '') is string);
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // Testimonials
+    function isValidTestimonial(data) {
+      return data.keys().hasAll(['name', 'review', 'rating']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.review is string && data.review.size() > 0 && data.review.size() <= 1000 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             (data.get('createdAt', '') is string);
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow update: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow delete: if isAdmin() && isValidId(testimonialId);
+    }
+
+    // FAQ
+    function isValidFaq(data) {
+      return data.keys().hasAll(['question', 'answer']) &&
+             data.question is string && data.question.size() > 0 && data.question.size() <= 500 &&
+             data.answer is string && data.answer.size() > 0 && data.answer.size() <= 2000 &&
+             (data.get('createdAt', '') is string);
+    }
+
+    match /faq/{faqId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(faqId) && isValidFaq(incoming());
+      allow update: if isAdmin() && isValidId(faqId) && isValidFaq(incoming());
+      allow delete: if isAdmin() && isValidId(faqId);
+    }
+
+    // Admins
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only manageable through Firebase Console initially
+    }
+  }
+}

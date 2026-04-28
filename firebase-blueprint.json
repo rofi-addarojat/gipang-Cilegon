@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "HomeContent": {
+      "title": "HomeContent",
+      "description": "Content for the landing page",
+      "type": "object",
+      "properties": {
+        "headline": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "shopeeUrl": { "type": "string" },
+        "tokopediaUrl": { "type": "string" },
+        "faviconUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["headline", "description"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product catalog",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "variant": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "price", "imageUrl"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "User reviews",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "review": { "type": "string" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "review", "rating"]
+    },
+    "Faq": {
+      "title": "FAQ",
+      "description": "Frequently Asked Questions",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["question", "answer"]
+    }
+  },
+  "firestore": {
+    "/content/home": {
+      "schema": { "$ref": "#/entities/HomeContent" },
+      "description": "Singleton document for home page settings"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "List of products"
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/Testimonial" },
+      "description": "List of testimonials"
+    },
+    "/faq/{faqId}": {
+      "schema": { "$ref": "#/entities/Faq" },
+      "description": "List of frequently asked questions"
+    }
+  }
+}
